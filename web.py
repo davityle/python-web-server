@@ -9,7 +9,6 @@ import argparse
 from wsgiref.handlers import format_date_time
 from datetime import datetime
 from time import mktime
-from time import strftime
 
 seconds = lambda: int(time.time())
 
@@ -93,13 +92,13 @@ class WebServer:
                     continue
                 if fd == self.server.fileno():
                     self.handle_server()
-                    continue
-                self.handle_client(fd)
+                else:
+                    self.handle_client(fd)
 
                 to_delete = []
                 for fileNo, client in self.clients.iteritems():
                     inactive_time = seconds() - client[1]
-                    if inactive_time >= self.timeout:
+                    if inactive_time > self.timeout:
                         to_delete.append(fileNo)
 
                 for fileNo in to_delete:
@@ -136,10 +135,11 @@ class WebServer:
             self.poller.register(client.fileno(), self.pollmask)
 
     def handle_client(self, fd):
+        if fd not in self.clients:
+            return
         client = self.clients[fd]
         try:
             data = client[0].recv(self.size)
-            client[1] = seconds()
         except socket.error, (value, message):
             if value == errno.EAGAIN or errno.EWOULDBLOCK:
                 return
@@ -153,7 +153,6 @@ class WebServer:
                     result = self.parse_http(client[2])
                     if type(result) is str:
                         client[0].send(result)
-                        # self.close_client(fd)
                     elif result.is_complete:
                         self.send_response(client, self.respond_get(result), fd)
                     else:
@@ -169,10 +168,11 @@ class WebServer:
         else:
             self.close_client(fd)
 
+        client[1] = seconds()
+
     def send_response(self, client, response, fd):
         # print response
         client[0].send(response)
-        # self.close_client(fd)
 
     def parse_http(self, request):
         try:
@@ -295,7 +295,7 @@ class Main:
 
     def parse_arguments(self):
         parser = argparse.ArgumentParser(prog='Web Server', description='A web server', add_help=True)
-        parser.add_argument('-p', '--port', type=int, action='store', help='port the server will bind to', default=3000)
+        parser.add_argument('-p', '--port', type=int, action='store', help='port the server will bind to', default=8080)
         self.args = parser.parse_args()
 
     def run(self):
