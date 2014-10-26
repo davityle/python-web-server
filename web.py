@@ -95,14 +95,14 @@ class WebServer:
                 else:
                     self.handle_client(fd)
 
-                to_delete = []
-                for fileNo, client in self.clients.iteritems():
-                    inactive_time = seconds() - client[1]
-                    if inactive_time > self.timeout:
-                        to_delete.append(fileNo)
+            to_delete = []
+            for fileNo, client in self.clients.iteritems():
+                inactive_time = seconds() - client[1]
+                if inactive_time > self.timeout:
+                    to_delete.append(fileNo)
 
-                for fileNo in to_delete:
-                    self.close_client(fileNo)
+            for fileNo in to_delete:
+                self.close_client(fileNo)
 
     def close_client(self, fd):
         self.poller.unregister(fd)
